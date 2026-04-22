@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# agent-harness — CLI skeleton
+#
+# PR-D1 占位：未实现任何功能。完整 CLI 在 Phase D PR-D3 实现。
+# 保留本文件是为了让"bin/agent-harness"路径从第一天就存在，
+# 消费项目的 BOOTSTRAP.md 文档引用此路径时不会 404。
+
+set -euo pipefail
+
+readonly COMMAND="${1:-}"
+
+case "$COMMAND" in
+    init|doctor|sync|extract-candidate|propose-upstream|upgrade|"")
+        echo "agent-harness CLI skeleton — not implemented yet (Phase D PR-D1)"
+        echo ""
+        echo "CLI 完整实现计划："
+        echo "  init [--minimal|--pragmatic] <target-dir>   — PR-D3"
+        echo "  doctor                                        — PR-D3"
+        echo "  sync --check                                  — PR-D3"
+        echo "  extract-candidate <path>                      — Phase E PR-E2"
+        echo "  propose-upstream <path>                       — Phase E PR-E2"
+        echo "  upgrade                                       — Phase F 候选"
+        echo ""
+        echo "当前 Phase D PR-D1 只建仓库骨架 + 定义契约，无可执行 CLI 命令。"
+        echo "见 BOOTSTRAP.md 和 docs/contracts/project-overlay.md"
+        exit 0
+        ;;
+    *)
+        echo "Unknown command: $COMMAND" >&2
+        echo "Run without arguments for help." >&2
+        exit 2
+        ;;
+esac

@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint (markdown + shell)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: markdownlint
+        uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          globs: |
+            **/*.md
+            !LICENSE
+        continue-on-error: false
+
+      - name: shellcheck
+        run: |
+          # 占位：PR-D1 没有 shell 脚本，但预置 shellcheck 作业防后续迁入时漏检
+          if find . -type f -name '*.sh' -not -path './.git/*' | grep -q .; then
+            sudo apt-get update && sudo apt-get install -y shellcheck
+            find . -type f -name '*.sh' -not -path './.git/*' -print0 | \
+              xargs -0 shellcheck --severity=warning
+          else
+            echo "No shell scripts yet. Skipping shellcheck."
+          fi
+
+  denylist:
+    name: Core denylist (防消费项目术语污染)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 扫描 core/ 目录禁止术语
+        run: |
+          # 按 docs/contracts/project-overlay.md 层 0 契约：
+          # core/ 不得含特定语言 / agent CLI / 消费项目术语
+          if [ -d core ]; then
+            DENYLIST="claude|codex|gemini|openai|cursor|swift|swiftui|swiftdata|xcode|snapdrill"
+            HITS=$(grep -riE "$DENYLIST" core/ || true)
+            if [ -n "$HITS" ]; then
+              echo "::error::core/ contains denied terms:"
+              echo "$HITS"
+              exit 1
+            else
+              echo "core/ 通过 denylist 扫描（PR-D1 为空目录，占位守护）"
+            fi
+          else
+            echo "core/ 目录不存在。PR-D1 不强制，未来 PR 迁入后生效"
+          fi
+
+      - name: 扫描 adapter-claude/ 目录只允许 Claude 相关术语
+        run: |
+          if [ -d adapter-claude ]; then
+            # adapter-claude/ 允许 claude/codex/gemini，禁止其他 adapter 和消费项目术语
+            DENYLIST="openai|cursor|swift|snapdrill|xcode"
+            HITS=$(grep -riE "$DENYLIST" adapter-claude/ || true)
+            if [ -n "$HITS" ]; then
+              echo "::warning::adapter-claude/ contains potentially out-of-scope terms:"
+              echo "$HITS"
+              # PR-D1 阶段只 warn，PR-D4 迁入时 upgrade 为 error
+            fi
+          fi
