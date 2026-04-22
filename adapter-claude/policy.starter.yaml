@@ -1,0 +1,108 @@
+# docaudit policy starter — Claude Code 消费项目起点
+#
+# 复制本文件到消费项目的 Scripts/audit/policy.yaml 或 .agent-harness/policy.yaml，
+# 填充 layout / scan / checks 字段后即可跑 docaudit。
+#
+# 本 starter 预设了 Claude Code 生态常见的目录约定（.claude/rules → docs/principles），
+# 非 Claude Code 消费项目可以自定义 layout。
+#
+# 引擎：agent-harness core/tools/docaudit/docaudit.py
+# Schema 详解：agent-harness core/tools/docaudit/policy.schema.yaml
+
+version: 1
+
+# ---- layout: 消费项目的目录约定（Claude Code 常见形态）----
+layout:
+  # rule-pointer-sync：消费项目的规则指针文件所在目录（通常 .claude/rules/）
+  rules_dir: ".claude/rules"
+
+  # rule-pointer-sync：规则指针目标目录（通常 docs/principles/）
+  principles_dir: "docs/principles"
+
+  # rule-pointer-sync：指针正则模板（默认匹配 "Read and follow"）
+  rule_pointer_pattern: '(?:Read and follow|指向|→)\s+({principles_dir}/[A-Za-z0-9_\-./]+\.md)'
+
+  # rule-usage：规则声明源文件（通常 docs/memory/feedback.md 或等价）
+  rules_file: "docs/memory/feedback.md"
+
+  # rule-usage：规则 ID 正则（第 1 捕获组 = ID）
+  # 默认 F-NNN 形式；消费项目可改为 RULE-NNN 或自定
+  rule_id_pattern: '\bF-(\d{3})\b'
+
+  # rule-usage：声明头部正则（匹配 "## F-NNN" 等标题）
+  rule_header_pattern: '^#{1,4}\s+F-(\d{3})\b'
+
+  # orphans：扫描起点目录
+  orphan_scan_dir: "docs"
+
+  # frontmatter_validator：可选；null 跳过 frontmatter check
+  # 若消费项目有自己的 frontmatter 校验脚本，填路径
+  frontmatter_validator: null
+
+# ---- scan: 审计扫描范围 ----
+scan:
+  include:
+    - "docs/"
+    - ".claude/"
+    - "Scripts/"
+    - "CLAUDE.md"
+    - "README.md"
+    - "STATUS.md"
+  exclude:
+    - ".claude/worktrees/"
+    - "docs/archive/"
+    - "Scripts/audit/"
+
+# ---- checks: 6 个子命令默认级别 ----
+checks:
+  links:
+    level: error
+    description: "Broken Markdown internal links."
+
+  archived-refs:
+    level: error
+    description: "Hardcoded references to deprecated archived paths."
+    archived_sources: []  # consumer 填：旧路径清单
+
+  orphans:
+    level: warning
+    description: "Markdown files under orphan_scan_dir with zero references."
+    whitelist:
+      - "docs/product/**"        # 产品文档独立入口（消费项目调整）
+      - "docs/archive/**"        # 归档文档豁免
+      - "docs/KNOWLEDGE_MAP.md"  # 自身是索引
+
+  home-path-refs:
+    level: warning
+    description: "Hardcoded references to user home private paths (~/...)."
+    pattern: '~/[A-Za-z0-9_\-./]+'
+    allowed_contexts:
+      - "docs/principles/memory-routing.md"
+      - ".claude/rules/memory-routing.md"
+      - "docs/principles/permission-model.md"
+
+  rule-pointer-sync:
+    level: error
+    description: "Rule pointer files under rules_dir must point to existing principle docs."
+    allowlist_rules:
+      - ".claude/rules/README.md"
+
+  rule-usage:
+    level: info
+    description: "Rule external reference count (dead rule candidates)."
+    min_references: 1
+
+# ---- legacy_whitelist: Finding 级豁免 ----
+# 每条规则：
+#   check:       6 子命令之一（必填）
+#   reason:      豁免理由（必填）
+#   expires_on:  YYYY-MM-DD 硬截止（必填，无效日期 exit 2）
+#   paths:       文件 glob 列表（可选）
+#   categories:  finding category 列表（可选）
+legacy_whitelist: []
+
+# ---- output ----
+output:
+  tsv_dir: "reports/"
+  summary_stdout: true
+  verbose_default: false

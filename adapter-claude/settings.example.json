@@ -1,0 +1,62 @@
+{
+  "_comment": "agent-harness Claude Code settings 模板。消费项目把本文件的 hooks 段拷贝/合并到自己的 .claude/settings.json。所有 hook 路径假设消费项目在 .claude/hooks/ 下有 symlink 或拷贝自 adapter-claude/hooks/ 的脚本。",
+
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/log-file-change.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/docaudit-on-doc-edit.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/post-merge-checkpoint.sh"
+          }
+        ]
+      },
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/session-metrics.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/block-dangerous-bash.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/long-session-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/docaudit-preflight.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/premerge-checklist.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
