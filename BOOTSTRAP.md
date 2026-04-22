@@ -53,11 +53,11 @@ my-project/
 5. PR 通过 two-consumer rule + 去项目化检查后合并
 6. 项目 bump `.agent-harness/lock.json`，可选择删除本地重复 overlay
 
-## 当前 snapdrill-ios 接入状态
+## 当前孵化项目接入状态
 
-**Phase D PR-D5（尚未合并）**：snapdrill-ios 将作为第一个 consumer 试点接入 agent-harness，**但不破坏 snapdrill-ios 本地现有机制**（双轨并行，`sync --check` 对照）。这也是 agent-harness 的第一个"实战验证 consumer"。
+**Phase D PR-D5（已合并 2026-04-22）**：孵化项目（一个私有 iOS 项目）作为第一个 consumer 试点接入 agent-harness，**但不破坏本地现有机制**（双轨并行，`sync --check` 对照）。这也是 agent-harness 的第一个"实战验证 consumer"。
 
-详见 `phase-de-consensus-20260422.md`（在 snapdrill-ios `~/.claude/plans/` 归档）。
+由于孵化项目是私有仓库（公司项目），外部观察者看不到该项目的 `.agent-harness/` 契约文件。agent-harness 本身保持公开，供所有项目作为基线使用。
 
 ## FAQ
 
