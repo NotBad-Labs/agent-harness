@@ -13,7 +13,7 @@
 
 | PR | 内容 |
 |---|---|
-| PR-D2 | `core/tools/docaudit/`：通用 docaudit 引擎（从 snapdrill-ios 参数化迁入） |
+| PR-D2 | `core/tools/docaudit/`：通用 docaudit 引擎（从孵化项目参数化迁入） |
 | PR-D2 | `core/policy.schema.yaml`：docaudit 策略 schema |
 | PR-D5（部分） | `core/principles/engineering.md` 等通用工程哲学（从 consensus 三方认定的"通用"原则迁入） |
 
