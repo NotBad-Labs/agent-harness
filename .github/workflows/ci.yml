@@ -53,10 +53,10 @@ jobs:
               echo "$HITS"
               exit 1
             else
-              echo "core/ 通过 denylist 扫描（PR-D1 为空目录，占位守护）"
+              echo "core/ 通过 denylist 扫描"
             fi
           else
-            echo "core/ 目录不存在。PR-D1 不强制，未来 PR 迁入后生效"
+            echo "core/ 目录不存在，跳过 denylist（PR-D1 之前）"
           fi
 
       - name: 扫描 adapter-claude/ 目录只允许 Claude 相关术语
@@ -68,6 +68,28 @@ jobs:
             if [ -n "$HITS" ]; then
               echo "::warning::adapter-claude/ contains potentially out-of-scope terms:"
               echo "$HITS"
-              # PR-D1 阶段只 warn，PR-D4 迁入时 upgrade 为 error
+              # 当前阶段只 warn，PR-D4 迁入 hooks/skills 时 upgrade 为 error
             fi
+          fi
+
+  core-tests:
+    name: Core self-tests (docaudit engine)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Run docaudit self-tests
+        run: |
+          if [ -d core/tools/docaudit/tests ]; then
+            python -m unittest discover -s core/tools/docaudit/tests -p 'test_*.py' -v
+          else
+            echo "core/tools/docaudit/tests/ 不存在，跳过（PR-D2 之前）"
           fi
