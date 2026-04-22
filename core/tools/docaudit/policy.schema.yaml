@@ -1,0 +1,105 @@
+# docaudit policy schema v1 — layout / scan / checks / legacy_whitelist
+#
+# 这是 schema 参考文件，不是可执行的 policy。
+# consumer 项目应在 .agent-harness/policy.yaml 或 Scripts/audit/policy.yaml 中
+# 提供符合本 schema 的配置。
+#
+# 引擎的 core/ 层不假设任何具体路径默认值 —— 所有 layout 字段必须由 consumer 显式声明
+# （否则对应 check 将被 skip 并记录 missing_layout_config warning）。
+
+version: 1
+
+# ---- layout: 消费项目的目录约定（必须显式声明）----
+#
+# 引擎无默认值；每个 check 依赖的字段缺失 → 该 check skip。
+layout:
+  # rule-pointer-sync 扫描目录（consumer 的规则指针文件所在目录）
+  rules_dir: ""            # 例：consumer overlay 中的 rules/ 或等价路径
+
+  # rule-pointer-sync 目标目录（规则指针文件指向此目录下的原则文档）
+  principles_dir: ""        # 例如："docs/principles"
+
+  # rule-pointer-sync 的指针正则模板
+  # 占位符 {principles_dir} 由 layout.principles_dir 替换
+  # 默认匹配 "Read and follow <principles_dir>/<name>.md"
+  rule_pointer_pattern: '(?:Read and follow|指向|→)\s+({principles_dir}/[A-Za-z0-9_\-./]+\.md)'
+
+  # rule-usage 的规则声明源文件
+  rules_file: ""            # 例如："docs/memory/feedback.md"
+
+  # rule-usage 的外部引用正则（第 1 捕获组 = 规则 ID）
+  # 默认匹配 RULE-NNN 形式；消费项目可改为 F-\d{3} 或其他
+  rule_id_pattern: '\bRULE-(\d{3})\b'
+
+  # rule-usage 的规则声明头部正则（匹配 rules_file 内的 "## RULE-NNN" 等标题行）
+  rule_header_pattern: '^#{1,4}\s+RULE-(\d{3})\b'
+
+  # orphans 扫描起点目录
+  orphan_scan_dir: ""       # 例如："docs"
+
+  # frontmatter_validator 路径（相对 repo root）；null 或空 = 跳过 frontmatter check
+  frontmatter_validator: null
+
+# ---- scan: 审计扫描范围 ----
+scan:
+  include: []               # consumer 填：repo 相对路径清单（文件或目录）
+  exclude: []               # consumer 填：glob 模式清单
+
+# ---- checks: 6 个子命令默认级别 ----
+#
+# level: error | warning | info
+#   error   — exit 1，阻断
+#   warning — exit 0，stderr 镜像摘要；--strict 升级为 error
+#   info    — stdout summary，无副作用
+checks:
+  links:
+    level: error
+    description: "Broken Markdown internal links."
+
+  archived-refs:
+    level: error
+    description: "Hardcoded references to deprecated archived_sources paths."
+    # consumer 声明已归档的旧路径清单（任何文件出现这些完整路径即命中）
+    archived_sources: []
+
+  orphans:
+    level: warning
+    description: "Markdown files under layout.orphan_scan_dir with zero references."
+    whitelist: []           # glob 模式豁免清单
+
+  home-path-refs:
+    level: warning
+    description: "Hardcoded references to user home private paths."
+    # 默认扫描 ~/ 开头的 path
+    pattern: '~/[A-Za-z0-9_\-./]+'
+    # 允许引用 home-path 的"纪律文档"清单（路径白名单）
+    allowed_contexts: []
+
+  rule-pointer-sync:
+    level: error
+    description: "Rule pointer files under layout.rules_dir must point to existing principle docs."
+    allowlist_rules: []     # 不扫描的 rule 文件清单
+
+  rule-usage:
+    level: info
+    description: "Rule external reference count (dead rule candidates)."
+    min_references: 1
+
+# ---- legacy_whitelist: Finding 级 post-filter ----
+#
+# 每条规则：
+#   check:       6 子命令之一（必填）
+#   reason:      豁免理由（必填，非空）
+#   expires_on:  YYYY-MM-DD 硬截止（必填，无效日期 exit 2）
+#   paths:       文件 glob 列表（可选，空 = 匹配该 check 所有 finding）
+#   categories:  finding category 列表（可选，空 = 匹配所有 category）
+#
+# 命中规则的 finding 标记 suppressed 不计入 exit code（仅在 --baseline 时生效）。
+# 新增违规（不匹配任何白名单）仍按原级别阻断，防回归。
+legacy_whitelist: []
+
+# ---- output: 报告输出 ----
+output:
+  tsv_dir: "reports/"       # --report 输出目录（相对 repo root）
+  summary_stdout: true
+  verbose_default: false
