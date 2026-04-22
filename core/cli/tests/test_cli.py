@@ -1,9 +1,10 @@
-"""CLI self-tests — init / doctor / sync subcommands."""
+"""CLI self-tests — init / doctor / sync / extract-candidate / propose-upstream."""
 
 from __future__ import annotations
 
 import io
 import json
+import subprocess
 import sys
 import unittest
 from contextlib import redirect_stdout, redirect_stderr
@@ -19,6 +20,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from core.cli import main as cli_main  # noqa: E402
 from core.cli import cmd_init, cmd_doctor, cmd_sync  # noqa: E402
+from core.cli import cmd_extract_candidate, cmd_propose_upstream  # noqa: E402
 
 
 class CliTestCase(unittest.TestCase):
@@ -206,6 +208,207 @@ class CliTestCase(unittest.TestCase):
         code, out, _ = self._run(["--version"])
         self.assertEqual(code, 0)
         self.assertIn("agent-harness", out)
+
+
+class ContribCliTestCase(unittest.TestCase):
+    """extract-candidate / propose-upstream tests. Fixture uses a real git repo."""
+
+    def setUp(self) -> None:
+        self._tmp_ctx = TemporaryDirectory()
+        self.tmp = Path(self._tmp_ctx.name)
+        self.target = self.tmp / "consumer"
+        self.target.mkdir()
+        # Init git repo so _git_log_stats works
+        self._git("init", "-q", "--initial-branch=main")
+        self._git("config", "user.email", "test@example.com")
+        self._git("config", "user.name", "Test")
+        # Run agent-harness init
+        self._run(["init", "--pragmatic", "--upstream-commit", "a" * 40, str(self.target)])
+        # Update project.yaml to include scan_paths pointing at fixture overlays
+        project_yaml_path = self.target / ".agent-harness" / "project.yaml"
+        project_yaml_path.write_text(
+            yaml.safe_dump({
+                "version": 1,
+                "project": {"name": "consumer-test", "type": "cli"},
+                "upstream": {"repo": "NotBad-Labs/agent-harness", "channel": "main"},
+                "contribution": {
+                    "enabled": True,
+                    "scan_paths": [".claude/skills", ".claude/hooks"],
+                    "consumer_terms": ["bespoke-product-name"],
+                },
+            }),
+            encoding="utf-8",
+        )
+        self._git("add", ".")
+        self._git("commit", "-q", "-m", "init fixture")
+
+    def tearDown(self) -> None:
+        self._tmp_ctx.cleanup()
+
+    def _git(self, *args: str) -> None:
+        subprocess.run(
+            ["git", *args],
+            cwd=str(self.target),
+            check=True,
+            capture_output=True,
+        )
+
+    def _run(self, argv: list[str]) -> tuple[int, str, str]:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            try:
+                code = cli_main.entry(argv)
+            except SystemExit as exc:
+                code = int(exc.code or 0)
+        return code, stdout.getvalue(), stderr.getvalue()
+
+    def _add_fixture_file(self, rel_path: str, content: str, commits: int = 1) -> Path:
+        """Write file + commit N times (commits must >= 1)."""
+        path = self.target / rel_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        for i in range(commits):
+            path.write_text(content + f"\n<!-- rev {i} -->\n", encoding="utf-8")
+            self._git("add", rel_path)
+            self._git("commit", "-q", "-m", f"add {rel_path} rev {i}")
+        return path
+
+    # ---------- extract-candidate ----------
+
+    def test_extract_candidate_missing_project_yaml_exits_2(self) -> None:
+        empty_dir = self.tmp / "empty"
+        empty_dir.mkdir()
+        code, _, err = self._run(["extract-candidate", str(empty_dir)])
+        self.assertEqual(code, 2)
+        self.assertIn("project.yaml not found", err)
+
+    def test_extract_candidate_reports_candidate_with_3_commits(self) -> None:
+        self._add_fixture_file(
+            ".claude/skills/generic-skill/SKILL.md",
+            "# Generic skill about cross-agent work",
+            commits=3,
+        )
+        code, out, _ = self._run(["extract-candidate", str(self.target)])
+        self.assertEqual(code, 0, out)
+        self.assertIn("generic-skill/SKILL.md", out)
+        self.assertIn("Suggested layer:", out)
+
+    def test_extract_candidate_filters_by_3_commits_by_default(self) -> None:
+        """File with < 3 commits should be filtered unless --include-untracked."""
+        self._add_fixture_file(
+            ".claude/skills/new-skill/SKILL.md",
+            "# Brand new skill",
+            commits=1,
+        )
+        code, out, _ = self._run(["extract-candidate", str(self.target)])
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("new-skill/SKILL.md", out)
+
+    def test_extract_candidate_include_untracked(self) -> None:
+        self._add_fixture_file(
+            ".claude/skills/new-skill/SKILL.md",
+            "# Brand new skill",
+            commits=1,
+        )
+        code, out, _ = self._run(
+            ["extract-candidate", "--include-untracked", str(self.target)]
+        )
+        self.assertEqual(code, 0, out)
+        self.assertIn("new-skill/SKILL.md", out)
+
+    def test_extract_candidate_detects_denylist_hits(self) -> None:
+        """File with swift/xcode etc. should get low score + preset-ios suggestion."""
+        self._add_fixture_file(
+            ".claude/hooks/swift-lint.sh",
+            "#!/bin/bash\n# runs swiftlint and xcodebuild tests",
+            commits=3,
+        )
+        code, out, _ = self._run(["extract-candidate", str(self.target)])
+        self.assertEqual(code, 0, out)
+        self.assertIn("swift-lint.sh", out)
+        # Should hit denylist and suggest preset-ios or STAY
+        self.assertTrue(
+            "preset-ios" in out or "STAY" in out,
+            f"expected preset-ios/STAY suggestion in:\n{out}",
+        )
+
+    # ---------- propose-upstream ----------
+
+    def test_propose_upstream_generates_draft(self) -> None:
+        self._add_fixture_file(
+            ".claude/skills/generic-skill/SKILL.md",
+            "# Generic skill",
+            commits=3,
+        )
+        code, out, _ = self._run([
+            "propose-upstream",
+            ".claude/skills/generic-skill/SKILL.md",
+            "--target",
+            str(self.target),
+        ])
+        self.assertEqual(code, 0, out)
+        self.assertIn("Proposal draft written to:", out)
+        proposals_dir = self.target / ".agent-harness" / "proposals"
+        self.assertTrue(proposals_dir.is_dir())
+        proposals = list(proposals_dir.glob("*.md"))
+        self.assertEqual(len(proposals), 1)
+        body = proposals[0].read_text(encoding="utf-8")
+        self.assertIn("consumer-test", body)
+        self.assertIn("generic-skill/SKILL.md", body)
+        # P2 status should be ✓ (3 commits >= 3)
+        self.assertIn("已独立有效使用 3 次（>= 3）", body)
+
+    def test_propose_upstream_p2_failing_when_below_3_commits(self) -> None:
+        self._add_fixture_file(
+            ".claude/skills/green-skill/SKILL.md",
+            "# New skill",
+            commits=1,
+        )
+        code, out, _ = self._run([
+            "propose-upstream",
+            ".claude/skills/green-skill/SKILL.md",
+            "--target",
+            str(self.target),
+        ])
+        self.assertEqual(code, 0, out)
+        body = next((self.target / ".agent-harness" / "proposals").glob("*.md")).read_text()
+        self.assertIn("< 3，不满足次门槛", body)
+        self.assertIn("NOTE: commit count < 3", out)
+
+    def test_propose_upstream_source_not_found_exits_2(self) -> None:
+        code, _, err = self._run([
+            "propose-upstream",
+            "nonexistent/path.md",
+            "--target",
+            str(self.target),
+        ])
+        self.assertEqual(code, 2)
+        self.assertIn("source file not found", err)
+
+    def test_propose_upstream_source_outside_consumer_exits_2(self) -> None:
+        external = self.tmp / "outside.md"
+        external.write_text("# external", encoding="utf-8")
+        code, _, err = self._run([
+            "propose-upstream",
+            str(external),
+            "--target",
+            str(self.target),
+        ])
+        self.assertEqual(code, 2)
+        self.assertIn("must be inside consumer root", err)
+
+    def test_propose_upstream_missing_project_yaml_exits_2(self) -> None:
+        empty = self.tmp / "empty-consumer"
+        empty.mkdir()
+        (empty / "foo.md").write_text("x", encoding="utf-8")
+        code, _, err = self._run([
+            "propose-upstream",
+            "foo.md",
+            "--target",
+            str(empty),
+        ])
+        self.assertEqual(code, 2)
+        self.assertIn("project.yaml", err)
 
 
 if __name__ == "__main__":

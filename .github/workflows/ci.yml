@@ -45,18 +45,26 @@ jobs:
         run: |
           # 按 docs/contracts/project-overlay.md 层 0 契约：
           # core/ 不得含特定语言 / agent CLI / 消费项目术语
+          #
+          # 豁免（有充分理由，不是放水）：
+          # - core/cli/cmd_extract_candidate.py: 反哺扫描引擎自身，必须知道要扫的词
+          #                                       （DEFAULT_DENYLIST 常量定义）
+          # - core/cli/tests/: 测试文件用禁用词作 fixture 验证检测功能
           if [ -d core ]; then
             DENYLIST="claude|codex|gemini|openai|cursor|swift|swiftui|swiftdata|xcode|snapdrill"
-            HITS=$(grep -riE "$DENYLIST" core/ || true)
+            HITS=$(grep -riE "$DENYLIST" core/ \
+              --exclude="cmd_extract_candidate.py" \
+              --exclude-dir="tests" \
+              || true)
             if [ -n "$HITS" ]; then
-              echo "::error::core/ contains denied terms:"
+              echo "::error::core/ contains denied terms (outside allowed exceptions):"
               echo "$HITS"
               exit 1
             else
-              echo "core/ 通过 denylist 扫描"
+              echo "core/ 通过 denylist 扫描（cmd_extract_candidate.py 与 tests/ 按豁免跳过）"
             fi
           else
-            echo "core/ 目录不存在，跳过 denylist（PR-D1 之前）"
+            echo "core/ 目录不存在，跳过 denylist"
           fi
 
       - name: 扫描 adapter-claude/ 目录只允许 Claude 相关术语
@@ -109,3 +117,5 @@ jobs:
           python3 bin/agent-harness init --help
           python3 bin/agent-harness doctor --help
           python3 bin/agent-harness sync --help
+          python3 bin/agent-harness extract-candidate --help
+          python3 bin/agent-harness propose-upstream --help
