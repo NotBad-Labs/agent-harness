@@ -73,7 +73,7 @@ jobs:
           fi
 
   core-tests:
-    name: Core self-tests (docaudit engine)
+    name: Core self-tests (docaudit + cli)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,5 +91,21 @@ jobs:
           if [ -d core/tools/docaudit/tests ]; then
             python -m unittest discover -s core/tools/docaudit/tests -p 'test_*.py' -v
           else
-            echo "core/tools/docaudit/tests/ 不存在，跳过（PR-D2 之前）"
+            echo "core/tools/docaudit/tests/ 不存在，跳过"
           fi
+
+      - name: Run CLI self-tests
+        run: |
+          if [ -d core/cli/tests ]; then
+            python -m unittest discover -s core/cli/tests -p 'test_*.py' -v
+          else
+            echo "core/cli/tests/ 不存在，跳过（PR-D3 之前）"
+          fi
+
+      - name: Smoke test bin/agent-harness
+        run: |
+          python3 bin/agent-harness --version
+          python3 bin/agent-harness --help
+          python3 bin/agent-harness init --help
+          python3 bin/agent-harness doctor --help
+          python3 bin/agent-harness sync --help
