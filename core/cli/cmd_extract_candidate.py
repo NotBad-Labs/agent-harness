@@ -152,18 +152,26 @@ def _score_and_suggest(
     denylist_hits: int,
     consumer_term_hits: int,
     file_path: Path,
+    rel_path: Path | None = None,
 ) -> tuple[int, str]:
     """Heuristic scoring (0-100) + suggested layer.
 
     Starting score 100, penalize denylist / consumer term hits.
     Floor at 0.
+
+    Uses rel_path (relative to consumer root) for layer heuristic if provided.
+    Falls back to file_path — but that risks matching consumer-root directory
+    names like "snapdrill-ios" (which contains "ios"). Always pass rel_path
+    from _build_candidate.
     """
     score = 100 - denylist_hits * 10 - consumer_term_hits * 5
     score = max(0, min(100, score))
 
-    path_str = str(file_path).lower()
+    # Use rel_path if given (preferred); fall back to file_path name for backward compat
+    path_for_match = rel_path if rel_path is not None else file_path
+    path_str = str(path_for_match).lower()
     # Suggested layer heuristic
-    if "swift" in path_str or "xcode" in path_str or "ios" in path_str:
+    if "swift" in path_str or "xcode" in path_str or path_str.startswith("ios/") or "/ios/" in path_str or path_str.endswith(".swift"):
         suggested = "preset-ios (needs adapt)"
     elif "/hooks/" in path_str or "/skills/" in path_str:
         if score >= 80:
@@ -200,8 +208,10 @@ def _build_candidate(
     denylist_hits = _count_denylist_hits(file_path, denylist)
     consumer_term_hits = _count_consumer_term_hits(file_path, consumer_terms)
     commit_count, first_seen, last_seen = _git_log_stats(file_path, consumer_root)
-    score, suggested = _score_and_suggest(denylist_hits, consumer_term_hits, file_path)
     rel_path = file_path.relative_to(consumer_root)
+    score, suggested = _score_and_suggest(
+        denylist_hits, consumer_term_hits, file_path, rel_path=rel_path
+    )
     return Candidate(
         path=rel_path,
         denylist_hits=denylist_hits,

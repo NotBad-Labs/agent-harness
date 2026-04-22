@@ -411,5 +411,53 @@ class ContribCliTestCase(unittest.TestCase):
         self.assertIn("project.yaml", err)
 
 
+class LayerSuggestionRegressionTest(unittest.TestCase):
+    """Regression: consumer root directory name containing 'ios' etc. must NOT
+    pollute the suggested-layer heuristic. The heuristic should only look at
+    the file's relative path, not the absolute path that includes consumer_root.
+
+    Trigger: Phase E PR-E4 dry-run on snapdrill-ios found all candidates
+    suggested as preset-ios because absolute path '/Users/yiming/Developer/snapdrill-ios/...'
+    contained 'ios'.
+    """
+
+    def test_score_and_suggest_uses_rel_path_not_absolute(self) -> None:
+        """When rel_path='.claude/skills/generic/SKILL.md' and file_path has 'ios' in
+        the consumer root segment, suggestion should be based on rel_path and
+        NOT hit the ios-preset branch."""
+        from pathlib import Path as P
+        score, suggested = cmd_extract_candidate._score_and_suggest(
+            denylist_hits=0,
+            consumer_term_hits=0,
+            file_path=P("/tmp/fake-consumer-with-ios-in-name/.claude/skills/generic/SKILL.md"),
+            rel_path=P(".claude/skills/generic/SKILL.md"),
+        )
+        # rel_path has "/skills/" -> should route to adapter-claude suggestion
+        self.assertEqual(score, 100)
+        self.assertIn("adapter-claude", suggested)
+        self.assertNotIn("preset-ios", suggested)
+
+    def test_score_and_suggest_still_detects_ios_in_rel_path(self) -> None:
+        """Files actually under ios/ (rel) or containing .swift should still suggest preset-ios."""
+        from pathlib import Path as P
+        score, suggested = cmd_extract_candidate._score_and_suggest(
+            denylist_hits=0,
+            consumer_term_hits=0,
+            file_path=P("/tmp/consumer/ios/mobile-helpers.sh"),
+            rel_path=P("ios/mobile-helpers.sh"),
+        )
+        self.assertIn("preset-ios", suggested)
+
+    def test_score_and_suggest_detects_swift_extension(self) -> None:
+        from pathlib import Path as P
+        score, suggested = cmd_extract_candidate._score_and_suggest(
+            denylist_hits=0,
+            consumer_term_hits=0,
+            file_path=P("/tmp/consumer/src/AppDelegate.swift"),
+            rel_path=P("src/AppDelegate.swift"),
+        )
+        self.assertIn("preset-ios", suggested)
+
+
 if __name__ == "__main__":
     unittest.main()
