@@ -93,19 +93,23 @@ flowchart LR
 
 ## 谁是 reviewer
 
-当前（Phase D 阶段）：
+当前（Phase E 阶段，agent-harness 已公开）：
 
-- **Primary**：仓库 owner（用户）
+- **Primary**：仓库 owner
 - **Secondary**：三方 cross-audit（Claude 主线程 / Codex / Gemini）按 consensus 流程
+- **Open source contributors**：欢迎外部 PR；反哺类 PR 按本文档 + `docs/contracts/contribution-rubric.md` 流程
 
-未来如果 agent-harness 开源：
+未来演进：
 
-- 新增 maintainer 角色
-- Review 规则在 `docs/governance/` 定义
+- 第 2 个独立 consumer 出现 → 升级 maintainer 治理模型
+- Review 规则的正式演进归档到 `docs/governance/`
 
-## 当前 Phase D 特殊情况
+## 详细 rubric 和 PR 字段
 
-Phase D 还在**建仓 + 骨架迁入**阶段，反哺协议本身还在起草。在 Phase E PR-E1 完成之前，反哺流程按**本文件草案 + 人工判断**混合执行。PR-E1 会把本文件升级为完整 contribution rubric（含自动化检查）。
+**本文件是协议总览**。具体的判定 checklist、去项目化技术指南、PR 必填字段、reviewer checklist、常见异议处理见：
+
+- [`docs/contracts/contribution-rubric.md`](./docs/contracts/contribution-rubric.md) — 正式 rubric（详细）
+- [`.github/pull_request_template.md`](./.github/pull_request_template.md) — PR 模板（开 PR 时自动加载）
 
 ---
 
