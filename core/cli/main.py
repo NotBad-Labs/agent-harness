@@ -165,7 +165,7 @@ def build_parser() -> argparse.ArgumentParser:
             "(denylist hits, git history, suggested layer) for a specific consumer file. "
             "The draft is written to .agent-harness/proposals/; author fills TODO fields."
         ),
-        epilog="Example: agent-harness propose-upstream .claude/skills/new/SKILL.md",
+        epilog="Example: agent-harness propose-upstream <path/to/skill-or-hook>",
     )
     pu_parser.add_argument(
         "source",
