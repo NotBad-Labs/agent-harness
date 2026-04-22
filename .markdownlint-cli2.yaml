@@ -1,0 +1,35 @@
+# markdownlint-cli2 配置
+#
+# 理由：
+# - 本项目文档主要使用中文（技术术语保留英文）
+# - MD013 默认行长 80 字符对中文不友好（CJK 字符双宽度，实际 ~40 字）
+# - 其他 MD* 规则保留，格式问题照常要求修复
+
+config:
+  # 行长：中文 markdown 禁用（语义决定换行比 80 硬编码更合理）
+  MD013: false
+
+  # 标题样式：允许 "# Heading" ATX 和 "Heading\n===" setext 并存
+  MD003:
+    style: consistent
+
+  # 列表样式：允许 dash / asterisk / plus 并存（同文档内一致即可）
+  MD004:
+    style: consistent
+
+  # 行内 HTML：允许（某些场景需要 <br> 等）
+  MD033: false
+
+  # First line heading：允许非 H1 开头（例如 frontmatter 后接 H1）
+  MD041: false
+
+  # 表格列风格：允许 compact `|---|---|`（中文表格更紧凑，不强制 balanced `| --- | --- |`）
+  MD060: false
+
+# 忽略文件
+globs:
+  - "**/*.md"
+ignores:
+  - LICENSE
+  - node_modules/
+  - .git/

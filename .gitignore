@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+._*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Python (未来 CLI 可能用 Python)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# Node (如果未来 CLI 用 npm 分发)
+node_modules/
+*.log
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Temporary
+*.tmp
+*.bak
+.cache/

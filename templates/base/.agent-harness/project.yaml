@@ -1,0 +1,66 @@
+# agent-harness consumer project configuration — schema v1 (draft, PR-D1)
+#
+# 位置：<consumer-project>/.agent-harness/project.yaml
+# 配套：<consumer-project>/.agent-harness/lock.json 锁定 upstream commit
+#
+# 本文件是 schema 草案。CLI 实现（`agent-harness init` 生成 / `agent-harness doctor` 校验）
+# 将在 Phase D PR-D3 完成。PR-D1 只定义字段契约。
+
+# Schema 版本（未来不兼容升级时 bump）
+version: 1
+
+# Consumer project metadata
+project:
+  name: ""                    # 必填，消费项目名（例：snapdrill-ios）
+  type: ""                    # 必填，项目类型标签（ios / web / backend / cli / ...）
+  repo: ""                    # 必填，仓库 URL（例：NotBad-Labs/snapdrill-ios）
+  description: ""             # 可选，一句话描述
+
+# Upstream agent-harness 版本锁定
+upstream:
+  repo: NotBad-Labs/agent-harness
+  # commit_lock 由 lock.json 单独管理（避免 YAML + JSON 双重锁定漂移）
+  # 本字段只标注"期望跟踪的 branch / tag"
+  channel: main               # main | stable (未来) | 具体 tag
+
+# 启用的 preset 清单（从 agent-harness 拉取对应目录）
+presets:
+  - adapter-claude            # 当前唯一可用 adapter
+  # 未来: adapter-openai / adapter-cursor
+  # 未来: preset-ios / preset-python / preset-web
+
+# Overlay 路径声明（消费项目本地的 project-specific 内容位置）
+overlay_paths:
+  skills: .claude/skills/project-*
+  principles: docs/principles/project-*
+  hooks: .claude/hooks/project-*
+  memory: docs/memory           # 完整 overlay（consumer 自己的 feedback / decisions / handoff）
+
+# docaudit policy override（可选）
+docaudit:
+  policy_file: Scripts/audit/policy.yaml   # 消费项目的 policy 文件路径
+  # 核心 policy.schema.yaml 的 override 在此声明
+
+# 反哺协议参数（可选）
+contribution:
+  enabled: true                           # 是否允许 extract-candidate 工具扫描
+  scan_paths:                             # 候选提取扫描范围
+    - .claude/skills/
+    - .claude/hooks/
+    - docs/principles/
+    - docs/memory/feedback.md
+  safety_override_reviewer: ""            # S-critical 级 override 的 approver GitHub handle
+
+# 通知（Phase E+ 实现）
+notifications:
+  pr_comment_on_drift: false              # sync --check 产生 drift 时是否自动 PR 评论
+
+# --- 示例：snapdrill-ios 消费项目配置（假想形态，Phase D PR-D5 真实落地时调整） ---
+# project:
+#   name: snapdrill-ios
+#   type: ios
+#   repo: NotBad-Labs/snapdrill-ios
+#   description: "练习题数字化效率工具"
+# presets:
+#   - adapter-claude
+#   - preset-ios
