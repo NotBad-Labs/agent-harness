@@ -19,7 +19,7 @@
 
 只产出战略文件和空骨架：
 
-```
+```text
 my-project/
   .agent-harness/
     project.yaml      # 项目 metadata + upstream version lock
@@ -62,12 +62,15 @@ my-project/
 ## FAQ
 
 ### Q: agent-harness 能用于非 iOS / 非 Swift 项目吗？
+
 A: 核心设计目标就是**任何项目**。当前 `preset-ios/` 是 SnapDrill 孵化带来的示例，其他项目可以忽略它，或者贡献 `preset-python/` / `preset-rust/` 等。
 
 ### Q: 不用 Claude Code 能用 agent-harness 吗？
+
 A: 目前 adapter 只有 `adapter-claude/`。未来 `adapter-openai/` / `adapter-cursor/` 等按需求迁入（只要有真实需求 + 第二 consumer 配合）。**现在**不用 Claude Code 的项目，只能用 `core/` 层（docaudit / 原则文档）。
 
 ### Q: agent-harness 自己怎么迭代？
+
 A: 见 [CONTRIBUTING.md](./CONTRIBUTING.md) 反哺协议。核心不允许"没有 consumer 证据的抽象"。
 
 ---

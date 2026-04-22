@@ -43,6 +43,7 @@
 **诚实标注**：PR-D1 时点，实际 adapter 只有 Claude Code 一家，Codex / Gemini 是 Claude Code 会话内的委派 CLI（不是独立 agent）。这是**现实**而不是**限制**。
 
 未来可能的扩展路径：
+
 - `adapter-claude/` — Claude Code（当前）
 - `adapter-openai/` — OpenAI Agents SDK（假想）
 - `adapter-cursor/` — Cursor（假想）
@@ -83,6 +84,7 @@
 消费项目的术语（SnapDrill / Swift / iOS / SwiftUI / 某个产品术语）出现在核心目录。
 
 **守门**：
+
 - CI denylist 拦住特定术语
 - `core/` 目录 PR 必须通过 `grep -rE "snapdrill|swift|ios|swiftui" core/` 为空
 - `adapter-claude/` 允许 Claude Code 相关术语，`preset-ios/` 允许 iOS 术语，严格目录分层

@@ -9,7 +9,7 @@ status: draft-pr-d1
 
 ## 目录分层（4 层）
 
-```
+```text
 agent-harness/
   core/                        # 层 0：语言/工具/agent 全无关
   adapter-<agent>/             # 层 1：特定 agent 适配层（当前仅 adapter-claude/）
@@ -30,18 +30,21 @@ agent-harness/
 ### 层 0：`core/`
 
 **绝对不含**：
+
 - 任何编程语言提及（Swift / Python / Rust / ...）
 - 任何特定 agent CLI / SDK 名（Claude Code / Codex / Gemini / OpenAI / Cursor / ...）
 - 任何消费项目产品术语（SnapDrill / ...）
 - 任何 OS 特定语法（macOS 特定的 `date -j` / GNU 特定的 `sed -i` 无后缀，等）
 
 **可以含**：
+
 - 抽象工程哲学（YAGNI / 奥卡姆 / SSOT / 可逆性）
 - 通用 docaudit 引擎（参数化，不硬编码路径）
 - 跨 agent 协同的抽象 protocol 定义
 - 通用 git workflow / PR 模板的基础字段
 
 **测试**：
+
 ```bash
 # 核心 denylist 扫描（CI 强制）
 grep -riE "claude|codex|gemini|openai|cursor|swift|python|rust|snapdrill|ios|xcode" core/
@@ -51,11 +54,13 @@ grep -riE "claude|codex|gemini|openai|cursor|swift|python|rust|snapdrill|ios|xco
 ### 层 1：`adapter-<agent>/`
 
 **可以含特定 agent 相关的具体内容**：
+
 - `adapter-claude/hooks/`：Claude Code 的 `.claude/hooks/` 模板
 - `adapter-claude/skills/`：Claude Code skill 模板（YAML frontmatter 含 Claude Code 特定字段）
 - `adapter-claude/settings.json`：Claude Code settings 模板
 
 **不得含**：
+
 - 其他 adapter 的内容
 - 消费项目的具体术语
 
@@ -64,15 +69,18 @@ grep -riE "claude|codex|gemini|openai|cursor|swift|python|rust|snapdrill|ios|xco
 ### 层 2：`preset-<domain>/`
 
 **可以含特定技术栈 / 领域相关的模板**：
+
 - `preset-ios/`：Swift / SwiftUI / Xcode 相关的 hooks / skills / 原则（初期空，反哺积累）
 - `preset-python/` / `preset-web/`：未来按需
 
 **不得含**：
+
 - 消费项目具体产品名 / 表名 / 文件名
 
 ### 层 3：`examples/`
 
 **展示用**，不作为功能性代码被引用：
+
 - `examples/snapdrill-overlay/`：SnapDrill 的 overlay 片段示例（不是完整副本）
 - 新 consumer 可以看 examples 学习接入模式
 
@@ -98,6 +106,7 @@ overlay_paths:
 ```
 
 **overlay 原则**：
+
 - **消费项目只能覆盖，不能改核心**：核心内容通过 symlink / 引用使用，不在消费项目内 fork
 - **overlay 路径**：所有项目特定内容必须在 `project-*` 前缀或独立目录
 - **drift 检测**：`agent-harness sync --check` 报告本地 vs upstream 的差异（不自动同步）

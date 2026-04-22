@@ -12,6 +12,7 @@
 ## 存在理由
 
 snapdrill-ios 是第一个 consumer，其 iOS / Swift / Xcode 相关的模式在消费项目内积累。当满足以下条件时反哺到 `preset-ios/`：
+
 - 至少 ≥ 3 次使用
 - two-consumer rule（说明第二类 iOS 项目如何使用）
 - 去消费项目术语化
