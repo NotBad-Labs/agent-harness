@@ -6,9 +6,9 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import cmd_init, cmd_doctor, cmd_sync
+from . import cmd_init, cmd_doctor, cmd_sync, cmd_extract_candidate, cmd_propose_upstream
 
-HARNESS_VERSION = "0.2.0-dev"  # pre-release; 0.1.0 = PR-D1 skeleton, 0.2.0 = PR-D3 CLI
+HARNESS_VERSION = "0.3.0-dev"  # 0.1.0 = PR-D1 skeleton / 0.2.0 = PR-D3 CLI / 0.3.0 = PR-E2 contrib CLI
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -132,6 +132,53 @@ def build_parser() -> argparse.ArgumentParser:
         help="Override upstream repo (default: NotBad-Labs/agent-harness).",
     )
 
+    # ---- extract-candidate ----
+    ec_parser = sub.add_parser(
+        "extract-candidate",
+        help="Scan consumer overlay for potential upstream contribution candidates.",
+        description=(
+            "Walk contribution.scan_paths declared in .agent-harness/project.yaml, "
+            "score each file by denylist / consumer-term hits + git history, "
+            "and print a ranked report."
+        ),
+        epilog="Example: agent-harness extract-candidate /path/to/consumer",
+    )
+    ec_parser.add_argument(
+        "target",
+        type=Path,
+        nargs="?",
+        default=None,
+        help="Target consumer project root (default: CWD).",
+    )
+    ec_parser.add_argument(
+        "--include-untracked",
+        action="store_true",
+        help="Include files with < 3 commits (would otherwise be filtered by P2 rule).",
+    )
+
+    # ---- propose-upstream ----
+    pu_parser = sub.add_parser(
+        "propose-upstream",
+        help="Generate a PR body draft for a specific candidate file.",
+        description=(
+            "Fill the agent-harness PR template with auto-scanned data "
+            "(denylist hits, git history, suggested layer) for a specific consumer file. "
+            "The draft is written to .agent-harness/proposals/; author fills TODO fields."
+        ),
+        epilog="Example: agent-harness propose-upstream <path/to/skill-or-hook>",
+    )
+    pu_parser.add_argument(
+        "source",
+        type=Path,
+        help="Source file path (relative to consumer root, or absolute).",
+    )
+    pu_parser.add_argument(
+        "--target",
+        type=Path,
+        default=None,
+        help="Target consumer project root (default: CWD).",
+    )
+
     return parser
 
 
@@ -145,6 +192,10 @@ def entry(argv: list[str] | None = None) -> int:
         return cmd_doctor.run(args)
     if args.command == "sync":
         return cmd_sync.run(args)
+    if args.command == "extract-candidate":
+        return cmd_extract_candidate.run(args)
+    if args.command == "propose-upstream":
+        return cmd_propose_upstream.run(args)
 
     parser.error(f"Unknown command: {args.command}")
     return 2
